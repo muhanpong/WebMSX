@@ -97,6 +97,7 @@ WMSX = {
     VDP_SOFT_TURBO_MULTI:           1,                          // 1..9 VDP Command Engine clock multiplier when in AUTO mode and activated by software or CPU_SOFT_TURBO_AUTO_ON
     CPU_SOFT_TURBO_AUTO_ON:         0,                          // 0: off, 1: on. Automatically activate the CPU Soft Turbo when supported by machine
     CPU_FAKE_TR_TURBO:              -1,                         // -1: auto; 0: off; 1: on. Simulated tR CHGCPU Turbo activation. Auto ON for 2+, never for tR
+    CPU_PANA_TURBO:                 -1,                         // -1: auto; 0: off; 1: on. Simulated Panasonic Turbo activation. Auto ON for 2+, never for tR
     KEYBOARD_JAPAN_LAYOUT:          1,                          // 0: ANSI; 1: JIS
     DEBUG_MODE:                     0,                          // 0: off; 1..7: debug mode. Don't change! :-)
     SPRITES_DEBUG_MODE:             0,                          // 0: off; 1: unlimited; 2: no collisions; 3: both. May cause problems :-)

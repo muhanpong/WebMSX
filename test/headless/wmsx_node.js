@@ -10,9 +10,10 @@ var vm = require("vm");
 
 var ROOT = path.resolve(__dirname, "../..");
 
-function scriptList() {
-    var html = fs.readFileSync(path.join(ROOT, "test/index.html"), "utf8");
-    var re = /<script[^>]*src="\.\.\/([^"]+)"/g, m, list = [];
+// cbios: the C-BIOS page's list (WMSXCBios.js and the C-BIOS system files)
+function scriptList(cbios) {
+    var html = fs.readFileSync(path.join(ROOT, cbios ? "test/cbios/index.html" : "test/index.html"), "utf8");
+    var re = /<script[^>]*src="(?:\.\.\/)+([^"]+)"/g, m, list = [];
     while ((m = re.exec(html))) list.push(m[1]);
     return list.filter(function(f) { return f !== "test/Test.js"; });
 }
@@ -90,7 +91,8 @@ exports.create = function(params) {
     var logs = [];
     ctx.console = { log: function() { logs.push([].join.call(arguments, " ")); }, info: function() {}, warn: function() {}, error: function() { logs.push("ERR " + [].join.call(arguments, " ")); }, debug: function() {} };
 
-    scriptList().forEach(function(f) {
+    var cbios = !!params.CBIOS; delete params.CBIOS;
+    scriptList(cbios).forEach(function(f) {
         vm.runInContext(fs.readFileSync(path.join(ROOT, f), "utf8"), ctx, { filename: f });
     });
 
