@@ -45,6 +45,7 @@ wmsx.CPU = function() {
     this.reset = function() {
         r800 = false;
         cpuCycles = 0; busCycles = 0; cpuToBusCycles = 0;
+        z80VDPIOLast = 0; cpuCyclesFraction = 0;     // cpuCycles restarts: an old last access would stall the next one
         ackINT = false; prefix = 0;
         T = 0; W = 0;
         opcode = 0; instruction = undefined;
@@ -453,6 +454,7 @@ wmsx.CPU = function() {
         var wait = z80VDPIOExtra;
         if (z80VDPIOWait) {
             var next = z80VDPIOLast + z80VDPIOWait;
+            if (next - cpuCycles > z80VDPIOWait) next = cpuCycles;        // last access from before a reset or state load
             if (cpuCycles < next) {
                 wait += next - cpuCycles;
                 z80VDPIOLast = next;
