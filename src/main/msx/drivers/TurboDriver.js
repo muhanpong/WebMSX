@@ -47,6 +47,8 @@ wmsx.TurboDriver = function(bios) {
 
         var z80Multi = z80Mode === 0 && softTurbo && softTurboON ? WMSX.Z80_SOFT_TURBO_MULTI : z80Mode > 0 ? z80Mode : 1;
         machine.cpu.setZ80ClockMulti(z80Multi);
+        // Panasonic MSX2+: VDP accesses 46 CPU cycles apart in turbo (8.6us at 1.5x), and 1 extra cycle each (T9769)
+        machine.cpu.setZ80VDPIOWait(panaTurbo && softTurboON && z80Mode === 0 ? 46 : 0, panaTurbo ? 1 : 0);
         machine.cpu.setR800ClockMulti(r800Mode);
         machine.vdp.setVDPTurboMulti(vdpMode === 0 && softTurbo && softTurboON ? WMSX.VDP_SOFT_TURBO_MULTI : vdpMode > 0 ? vdpMode : 1);
 

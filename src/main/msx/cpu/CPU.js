@@ -106,7 +106,7 @@ wmsx.CPU = function() {
     this.busClockPulsesZ80 = function(busPulses) {
         if (z80BUSRQ) return;
 
-        var toCycle = cpuCycles + ((busPulses * clockMulti) | 0);
+        var toCycle = cpuCycles + cpuCyclesForPulses(busPulses);
         for (; cpuCycles < toCycle; ++cpuCycles) {
            if (--T > 0) continue;
            if (T < 0) {
@@ -120,7 +120,7 @@ wmsx.CPU = function() {
     this.busClockPulsesBoth = function(busPulses) {
         if (z80BUSRQ && !r800) return;
 
-        var toCycle = cpuCycles + ((busPulses * clockMulti) | 0);
+        var toCycle = cpuCycles + cpuCyclesForPulses(busPulses);
         for (; cpuCycles < toCycle; ++cpuCycles) {
             if (--T > 0) continue;
             if (T < 0) {
@@ -136,6 +136,16 @@ wmsx.CPU = function() {
     };
 
     this.busClockPulses = this.busClockPulsesZ80;
+
+    // CPU cycles for busPulses BUS cycles. With a non-integer multiplier (Panasonic turbo 1.5x) the fraction
+    // is carried to the next call: truncating it lost 2 of the 342 CPU cycles of every line (0.58%)
+    function cpuCyclesForPulses(busPulses) {
+        var cycles = busPulses * clockMulti + cpuCyclesFraction;
+        var whole = cycles | 0;
+        cpuCyclesFraction = cycles - whole;
+        return whole;
+    }
+    var cpuCyclesFraction = 0;
 
     // this.busClockPulsesOld = function(busPulses) {
     //     var toCycle = cpuCycles + ((busPulses * clockMulti) | 0);
@@ -427,11 +437,36 @@ wmsx.CPU = function() {
     }
 
     function busInput(port) {
+        if ((z80VDPIOWait || z80VDPIOExtra) && (port & 0xfc) === 0x98) z80VDPIODelay();       // port is 16 bits (A or B in the high byte)
         return bus.input(port);
     }
     function busOutput(port, val) {
+        if ((z80VDPIOWait || z80VDPIOExtra) && (port & 0xfc) === 0x98) z80VDPIODelay();       // port is 16 bits (A or B in the high byte)
         bus.output(port,  val);
     }
+
+    // Panasonic MSX2+ turbo: VDP accesses at least z80VDPIOWait CPU cycles apart (46 at 5.37 MHz = 8.6us,
+    // as openMSX MSXMatsushita). Then z80VDPIOExtra more cycles on every VDP access: the T9769 engine of
+    // Panasonic MSX2+ adds 1 at any speed (openMSX VDP fixedVDPIOdelayCycles, issue #989).
+    // Like the R800 waits here the access itself is not moved, the CPU waits after it
+    function z80VDPIODelay() {
+        var wait = z80VDPIOExtra;
+        if (z80VDPIOWait) {
+            var next = z80VDPIOLast + z80VDPIOWait;
+            if (cpuCycles < next) {
+                wait += next - cpuCycles;
+                z80VDPIOLast = next;
+            } else
+                z80VDPIOLast = cpuCycles;
+        }
+        if (wait) { T += wait; instruction = instrWait; }
+    }
+
+    this.setZ80VDPIOWait = function(cycles, extra) {
+        z80VDPIOWait = cycles | 0;
+        z80VDPIOExtra = extra | 0;
+    };
+    var z80VDPIOWait = 0, z80VDPIOExtra = 0, z80VDPIOLast = 0;
 
 
     function busRead_R800(addr) {

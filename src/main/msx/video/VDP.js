@@ -673,6 +673,7 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
         // End of Active Display
 
         HR = 1;                                                                                     // HR = 1
+        if (spritesPrevLineSAT) for (var a = 0; a < 128; ++a) satSnap[a] = vram[spriteAttrTableAddress + a];
         if (currentScanline - frameStartingActiveScanline === horizontalIntLine)
             triggerHorizontalInterrupt();                                                           // FH = 1
 
@@ -1853,18 +1854,21 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
 
     function renderSpritesLineMode1(line, bufferPos) {
         // SPD (R#8 bit 1) also hides Mode 1 sprites on V9938/V9958, as for Mode 2 (on V9918 R#8 stays 0)
-        if (!spritesEnabled || vram[spriteAttrTableAddress] === 208) return;          // No sprites to show!
+        // TEST (SPRITES_PREV_LINE_SAT): attributes as they were at the end of the previous line (HR = 1), as openMSX
+        var atr = vram, atrBase = spriteAttrTableAddress;
+        if (spritesPrevLineSAT) { atr = satSnap; atrBase = 0; }
+        if (!spritesEnabled || atr[atrBase] === 208) return;          // No sprites to show!
 
         var size = spritesSize << spritesMag;
         var atrPos, color, name, lineInPattern, pattern;
         var sprite = -1, drawn = 0, y, spriteLine, x, s, f;
         spritesGlobalPriority -= 32;
 
-        atrPos = spriteAttrTableAddress - 4;
+        atrPos = atrBase - 4;
         for (var i = 0; i < 32; ++i) {                                // Max of 32 sprites
             atrPos = atrPos + 4;
             sprite = sprite + 1;
-            y = vram[atrPos];
+            y = atr[atrPos];
             if (y === 208) break;                                           // Stop Sprite processing for the line, as per spec
             spriteLine = (line - y - 1) & 255;
             if (spriteLine >= size) continue;                               // Not visible at line
@@ -1872,20 +1876,20 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
                 if (spritesInvalid < 0 && !F) spritesInvalid = sprite;
                 if (spriteDebugModeLimit) return;
             }
-            color = vram[atrPos + 3];
+            color = atr[atrPos + 3];
             if (!isV9918 && (color & 0xf) === 0 && !color0Solid) continue;  // Nothing to paint. Consider TP for 9938/58
-            x = vram[atrPos + 1];
+            x = atr[atrPos + 1];
             if (color & 0x80) {
                 x -= 32;                                                    // Early Clock bit, X to be 32 to the left
                 if (x <= -size) continue;                                   // Not visible (out to the left)
             }
             color &= 0x0f;
             if (spritesSize === 16) {
-                name = debugModeSpriteInfoNumbers ? sprite << 2: vram[atrPos + 2] & 0xfc;
+                name = debugModeSpriteInfoNumbers ? sprite << 2: atr[atrPos + 2] & 0xfc;
                 lineInPattern = spritePatternTableAddress + (name << 3) + (spriteLine >>> spritesMag);
                 pattern = (vram[lineInPattern] << 8) | vram[lineInPattern + 16];
             } else {
-                name = debugModeSpriteInfoNumbers ? sprite : vram[atrPos + 2];
+                name = debugModeSpriteInfoNumbers ? sprite : atr[atrPos + 2];
                 pattern = vram[spritePatternTableAddress + (name << 3) + (spriteLine >>> spritesMag)];
             }
             s = x <= 256 - size ? 0 : x - (256 - size);
@@ -2390,9 +2394,11 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
     var bufferLineAdvance;
     var currentScanline;
 
+    var spritesPrevLineSAT = !!WMSX.SPRITES_PREV_LINE_SAT, satSnap = new Uint8Array(128);       // TEST, see renderSpritesLineMode1
+
     // Test harness only (test/headless): scanline counted from the frame start, and from the first active line
     this.getScanlineForTest = function() {
-        return { frameLine: currentScanline, activeLine: currentScanline - frameStartingActiveScanline };
+        return { frameLine: currentScanline, activeLine: currentScanline - frameStartingActiveScanline, vramPointer: vramPointer };
     };
 
     var signalActiveHeight;
