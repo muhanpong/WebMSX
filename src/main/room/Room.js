@@ -6,6 +6,7 @@ wmsx.Room = function(screenElement, machineStartPowerOn) {
     var self = this;
 
     function init() {
+        wmsx.VDP.updateSignalHeights();
         buildMainClock();
         buildPeripherals();
         buildAndPlugMachine();

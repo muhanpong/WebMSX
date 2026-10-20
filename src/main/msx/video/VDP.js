@@ -824,11 +824,12 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
         }
 
         // Render starts at first Top Border line
-        // Total Top border height is 16. UX decision: Visible top and bottom border height with no Vertical Adjust is 8
-        startingVisibleTopBorderScanline = 16 - 8;                                                              // 0-7 Top Border lines left invisible (NTSC with LN = 0)
-        startingActiveScanline = startingVisibleTopBorderScanline + 8 + addBorder + verticalAdjust;
+        // Total Top border height is 16. UX decision: Visible top and bottom border height with no Vertical Adjust is 8 (VDP_BORDER_LINES)
+        var border = WMSX.VDP_BORDER_LINES;
+        startingVisibleTopBorderScanline = 16 - border;                                                         // 0-7 Top Border lines left invisible (NTSC with LN = 0, 8 border lines)
+        startingActiveScanline = startingVisibleTopBorderScanline + border + addBorder + verticalAdjust;
         var startingVisibleBottomBorderScanline = startingActiveScanline + signalActiveHeight;
-        startingInvisibleScanline = startingVisibleBottomBorderScanline + 8 + addBorder - verticalAdjust;       // Remaining left invisible: Bottom border, Bottom Erase, Sync and Top Erase
+        startingInvisibleScanline = startingVisibleBottomBorderScanline + border + addBorder - verticalAdjust;  // Remaining left invisible: Bottom border, Bottom Erase, Sync and Top Erase
         finishingScanline = frameVideoStandard.totalHeight;
 
         if (force) frameStartingActiveScanline = startingActiveScanline;
@@ -845,7 +846,7 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
             newRenderHeight = wmsx.VDP.SIGNAL_HEIGHT_V9918;
         } else {
             newRenderWidth = modeData.width === 512 ? 512 + 16 * 2 : 256 + 8 * 2;
-            newRenderHeight = !isV9918 && (register[9] & 0x08) ? 424 + 16 * 2 : 212 + 8 * 2;
+            newRenderHeight = !isV9918 && (register[9] & 0x08) ? 424 + WMSX.VDP_BORDER_LINES * 4 : 212 + WMSX.VDP_BORDER_LINES * 2;
         }
 
         renderMetricsChangePending = false;
@@ -901,7 +902,7 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
     }
 
     function updateSpritesConfig() {
-        spritesEnabled = !debugModeSpritesHidden && (register[8] & 0x02) === 0;        // SPD
+        spritesEnabled = !debugModeSpritesHidden && (isV9918 || (register[8] & 0x02) === 0);        // SPD (none on V9918)
         spritesSize = (register[1] & 0x02) ? 16 : 8;        // SI
         spritesMag = register[1] & 0x01;                    // MAG
 
@@ -1851,7 +1852,8 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
     }
 
     function renderSpritesLineMode1(line, bufferPos) {
-        if (debugModeSpritesHidden || vram[spriteAttrTableAddress] === 208) return;    // No sprites to show!
+        // SPD (R#8 bit 1) also hides Mode 1 sprites on V9938/V9958, as for Mode 2 (on V9918 R#8 stays 0)
+        if (!spritesEnabled || vram[spriteAttrTableAddress] === 208) return;          // No sprites to show!
 
         var size = spritesSize << spritesMag;
         var atrPos, color, name, lineInPattern, pattern;
@@ -2388,6 +2390,11 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
     var bufferLineAdvance;
     var currentScanline;
 
+    // Test harness only (test/headless): scanline counted from the frame start, and from the first active line
+    this.getScanlineForTest = function() {
+        return { frameLine: currentScanline, activeLine: currentScanline - frameStartingActiveScanline };
+    };
+
     var signalActiveHeight;
     var finishingScanline;
     var startingActiveScanline, frameStartingActiveScanline;
@@ -2600,12 +2607,16 @@ wmsx.VDP = function(machine, cpu, vSyncConnection) {
 wmsx.VDP.VRAM_LIMIT = 0x1ffff;      // 128K
 
 wmsx.VDP.SIGNAL_WIDTH_V9918 =  256 + 8 * 2;
-wmsx.VDP.SIGNAL_HEIGHT_V9918 = 192 + 8 * 2;
-
 wmsx.VDP.SIGNAL_START_WIDTH_V9938 =  256 + 8 * 2;
-wmsx.VDP.SIGNAL_START_HEIGHT_V9938 = 212 + 8 * 2;
-
 wmsx.VDP.SIGNAL_MAX_WIDTH_V9938 =  (256 + 8 * 2) * 2;
-wmsx.VDP.SIGNAL_MAX_HEIGHT_V9938 = (212 + 8 * 2) * 2;
+
+// Heights depend on WMSX.VDP_BORDER_LINES, so they are set after the configuration is applied (Room init)
+wmsx.VDP.updateSignalHeights = function() {
+    var border = WMSX.VDP_BORDER_LINES || 8;
+    wmsx.VDP.SIGNAL_HEIGHT_V9918 = 192 + border * 2;
+    wmsx.VDP.SIGNAL_START_HEIGHT_V9938 = 212 + border * 2;
+    wmsx.VDP.SIGNAL_MAX_HEIGHT_V9938 = (212 + border * 2) * 2;
+};
+wmsx.VDP.updateSignalHeights();
 
 wmsx.VDP.BASE_CLOCK = wmsx.CPU.BASE_CLOCK * 6;      // 21504960 Hz

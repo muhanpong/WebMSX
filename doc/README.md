@@ -285,6 +285,7 @@ https://webmsx.org?MACHINE=MSX1E&DISK=https://basicmuseum.org/Demos.dsk&BASIC_RU
 | `BOOT_KEYS_FRAMES`              |  -1                 |  Number of frames for Boot Keys. -1: auto; > 0: frames
 | `FAST_BOOT`                     |  0                  |  Number of frames for Fast Boot. 0: off; 1: auto (same as Boot Keys frames); > 1: number of frames
 | `VDP_TYPE`                      |  -1                 |  VDP Chip. -1: auto; 1: V9918; 2: V9938; 3: V9958
+| `VDP_BORDER_LINES`              |  8                  |  Visible Top and Bottom Border lines, each. 8..16. 14 shows the same area as openMSX (for software that draws into the border)
 | **+** `VDP_PALETTE`             |  2                  |  MSX1 Palette. 0: WebMSX Original; 1: V9918; 2: V9928; 3: V9938; 4: Toshiba; 5: Fujitsu FM-X
 | `RTC_ACTIVE`                    |  -1                 |  RTC Chip. -1: auto; 0: not present; 1: present
 | `RAMMAPPER_SIZE`                |  512                |  RAM Mapper size when active. 64, 128, 256, 512, 1024, 2048, 4096, in KB 

@@ -196,6 +196,7 @@ wmsx.Configurator = {
         WMSX.CPU_FAKE_TR_TURBO |= 0;
         WMSX.R800_TIMING |= 0;
         WMSX.VDP_TYPE |= 0;
+        WMSX.VDP_BORDER_LINES = Math.max(8, Math.min(16, WMSX.VDP_BORDER_LINES | 0));
         WMSX.VDP_PALETTE |= 0;
 
         // Boolean parameters (only single parameters known)

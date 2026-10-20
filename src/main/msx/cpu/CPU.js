@@ -323,6 +323,7 @@ wmsx.CPU = function() {
 
     function fetchNextInstruction() {
         // if (DEBUG_PC_LOCATIONS[PC]) console.log("LOCATION: " + DEBUG_PC_LOCATIONS[PC]);
+        if (pcHooks !== null && pcHooks[PC] !== undefined) pcHooks[PC](PC);       // test harness only (test/headless)
 
         ++R;
         opcode = r800 ? fetchN_R800() : fetchN();
@@ -3290,6 +3291,13 @@ wmsx.CPU = function() {
     // };
 
     // this.HALT = 0;
+
+    // Test harness: call fn(pc) before the instruction at pc is fetched. setPCHook(pc, undefined) removes it.
+    this.setPCHook = function(pc, fn) {
+        if (pcHooks === null) pcHooks = new Array(65536);
+        pcHooks[pc] = fn;
+    };
+    var pcHooks = null;
 
     this.eval = function(str) {
         return eval(str);
